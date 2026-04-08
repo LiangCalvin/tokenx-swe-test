@@ -10,7 +10,10 @@ app.use(express.json());
 
 // --- Setup Ethers ---
 // ใช้ URL ของ Hardhat node (ปกติคือ http://127.0.0.1:8545)
-const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+// const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL, undefined, {
+    staticNetwork: true
+});
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 // ใส่ Address ของ VaultShares ที่คุณได้จากการ Deploy
