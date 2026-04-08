@@ -15,7 +15,13 @@ const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 // ใส่ Address ของ VaultShares ที่คุณได้จากการ Deploy
 const vaultSharesAddress = process.env.VAULT_SHARES_ADDRESS;
-const abi = [ /* ก๊อปปี้ ABI จากไฟล์ artifacts/contracts/VaultShares.sol/VaultShares.json มาใส่ที่นี่ */ ];
+const abi = [ 
+    /* ก๊อปปี้ ABI จากไฟล์ artifacts/contracts/VaultShares.sol/VaultShares.json มาใส่ที่นี่ */ 
+    "event RedemptionRequested(uint256 indexed requestId, address indexed wallet, uint256 shares, uint256 nav, uint256 amount)",
+    "event RedemptionSettled(uint256 indexed requestId, address indexed wallet, uint256 amount)",
+    "function settleRedemption(uint256 _requestId) external",
+    "function redemptions(uint256) view returns (uint256 id, address wallet, uint256 shares, uint256 nav, uint256 amount, uint256 unlockDate, uint8 status)"
+];
 
 const vaultSharesContract = new ethers.Contract(vaultSharesAddress, abi, wallet);
 
