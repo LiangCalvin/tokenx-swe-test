@@ -23,3 +23,5 @@ async function startIndexer(vaultSharesContract) {
     console.log(`Settled Request ID: ${id}`);
   });
 }
+
+module.exports = { startIndexer };
