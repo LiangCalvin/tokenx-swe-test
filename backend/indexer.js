@@ -27,7 +27,7 @@ const db = require("./database");
 async function startIndexer(vaultSharesContract) {
   console.log("Listening for events...");
 
-  // ใช้คำสั่งนี้เพื่อดักฟังเหตุการณ์แบบเฉพาะเจาะจง
+    // 1. ฟังตอนขอถอน (RedemptionRequested)
   vaultSharesContract.on("RedemptionRequested", async (id, wallet, shares, nav, amount) => {
     console.log(`📌 New Request Caught: ID ${id}`);
     const unlockDate = Math.floor(Date.now() / 1000) + (24 * 60 * 60);
@@ -39,6 +39,25 @@ async function startIndexer(vaultSharesContract) {
       (err) => { if(err) console.error("DB Error:", err.message); }
     );
   });
+
+  // 2. เพิ่มส่วนนี้: ฟังตอนจ่ายเงินสำเร็จ (RedemptionSettled)
+  vaultSharesContract.on("RedemptionSettled", (id, wallet, amount) => {
+    console.log(`✅ Settled Event Detected: ID ${id}`);
+    
+    db.run(
+      `UPDATE redemptions SET status = 'fulfilled' WHERE requestId = ?`,
+      [Number(id)],
+      (err) => {
+        if (err) {
+          console.error("❌ DB Update Error:", err.message);
+        } else {
+          console.log(`📝 Database updated: Request ID ${id} is now fulfilled`);
+        }
+      }
+    );
+  });
+  
+
 }
 
 module.exports = { startIndexer };
