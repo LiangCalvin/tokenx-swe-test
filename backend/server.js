@@ -60,4 +60,30 @@ app.get('/api/redemptions', (req, res) => {
     });
 });
 
+// เพิ่มใน server.js
+app.post('/api/settle', async (req, res) => {
+    const { requestId } = req.body;
+
+    try {
+        // 1. ตรวจสอบข้อมูลใน Contract (Optional: เพื่อความแม่นยำสูงสุด)
+        // หรือจะตรวจสอบจาก DB ก่อนก็ได้ครับ
+        
+        // 2. สั่ง Settle ไปที่ Blockchain
+        const tx = await vaultSharesContract.settleRedemption(requestId);
+        console.log(`Sending tx: ${tx.hash}`);
+        
+        // 3. รอ Transaction ยืนยัน
+        await tx.wait();
+
+        res.json({ message: "Settlement successful", txHash: tx.hash });
+    } catch (error) {
+        console.error(error);
+        // ดัก Error ตามที่ Test คาดหวัง
+        if (error.message.includes("InsufficientLiquidity")) {
+            return res.status(400).json({ error: "INSUFFICIENT_LIQUIDITY" });
+        }
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.listen(3000, () => console.log('🔥 Server running on http://localhost:3000'));
