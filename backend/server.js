@@ -34,6 +34,8 @@ const abi = [
     "function settleRedemption(uint256 _requestId) external",
     "function redemptions(uint256) view returns (uint256 id, address wallet, uint256 shares, uint256 nav, uint256 amount, uint256 unlockDate, uint8 status)",
     "function setNav(uint256 _newNav) external",
+    "function fundVault() view returns (address)",
+    "function stablecoin() view returns (address)"
 ];
 
 const vaultSharesContract = new ethers.Contract(vaultSharesAddress, abi, wallet);
@@ -196,6 +198,78 @@ app.post('/api/nav', async (req, res) => {
 
         res.status(500).json({
             error: { code: "NAV_UPDATE_FAILED", message: error.message }
+        });
+    }
+});
+
+app.post('/api/withdraw', async (req, res) => {
+    const { amount } = req.body;
+
+    // 1. Validation เบื้องต้น
+    if (!amount || isNaN(amount)) {
+        return res.status(400).json({ 
+            error: { code: "INVALID_INPUT", message: "Please provide a valid amount" } 
+        });
+    }
+
+    try {
+        const amountInWei = ethers.parseUnits(amount.toString(), 18);
+        const fundVaultAddress = await vaultSharesContract.fundVault();
+        const stablecoinAddress = await vaultSharesContract.stablecoin();
+        
+        // 2. สร้าง Instance ของ Stablecoin เพื่อเช็คยอดเงิน
+        const stablecoin = new ethers.Contract(
+            stablecoinAddress, 
+            ["function balanceOf(address) view returns (uint256)"], 
+            provider
+        );
+        // 2. เช็คยอดเงินใน FundVault (Treasury Balance) ก่อนส่ง TX
+        // สมมติว่า stablecoin คือ instance ของ IERC20 ที่เราตั้งค่าไว้
+        const treasuryBalance = await stablecoin.balanceOf(fundVaultAddress);
+
+        if (treasuryBalance < amountInWei) {
+            return res.status(400).json({
+                error: {
+                    code: "INSUFFICIENT_TREASURY_BALANCE",
+                    message: "Vault has less THB than requested"
+                }
+            });
+        }
+
+        // 3. เรียกฟังก์ชัน withdraw จาก FundVault
+        // หมายเหตุ: ตรวจสอบชื่อฟังก์ชันใน FundVault.sol ของคุณอีกครั้ง
+        // ปกติจะเป็น fundVaultContract.withdraw(amountInWei)
+        const fundVaultContract = new ethers.Contract(fundVaultAddress, fundVaultJSON.abi, wallet);
+        const tx = await fundVaultContract.withdraw(amountInWei);
+        
+        console.log(`Withdrawing: ${tx.hash}`);
+
+        // 4. รอ Transaction Confirm
+        await tx.wait();
+
+        // 5. Response 200 OK ตาม Requirement
+        res.json({
+            data: {
+                txHash: tx.hash
+            }
+        });
+
+    } catch (error) {
+        console.error("Withdraw Error:", error);
+
+        // ดักจับ Error Unauthorized (ถ้ามี)
+        const errorData = error.data || error.error?.data || error.info?.error?.data;
+        if (errorData) {
+            const decodedError = vaultInterface.parseError(errorData);
+            if (decodedError && decodedError.name === "OwnableUnauthorizedAccount") {
+                return res.status(403).json({
+                    error: { code: "UNAUTHORIZED", message: "Only owner can withdraw" }
+                });
+            }
+        }
+
+        res.status(500).json({
+            error: { code: "WITHDRAW_FAILED", message: error.message }
         });
     }
 });
