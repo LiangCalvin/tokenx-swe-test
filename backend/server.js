@@ -30,8 +30,10 @@ const abi = [
     /* ก๊อปปี้ ABI จากไฟล์ artifacts/contracts/VaultShares.sol/VaultShares.json มาใส่ที่นี่ */ 
     "event RedemptionRequested(uint256 indexed requestId, address indexed wallet, uint256 shares, uint256 nav, uint256 amount)",
     "event RedemptionSettled(uint256 indexed requestId, address indexed wallet, uint256 amount)",
+    "event NavUpdated(uint256 oldNav, uint256 newNav)",
     "function settleRedemption(uint256 _requestId) external",
-    "function redemptions(uint256) view returns (uint256 id, address wallet, uint256 shares, uint256 nav, uint256 amount, uint256 unlockDate, uint8 status)"
+    "function redemptions(uint256) view returns (uint256 id, address wallet, uint256 shares, uint256 nav, uint256 amount, uint256 unlockDate, uint8 status)",
+    "function setNav(uint256 _newNav) external",
 ];
 
 const vaultSharesContract = new ethers.Contract(vaultSharesAddress, abi, wallet);
@@ -143,6 +145,57 @@ app.post('/api/settle', async (req, res) => {
 
         res.status(500).json({
             error: { code: "INTERNAL_SERVER_ERROR", message: error.message }
+        });
+    }
+});
+
+app.post('/api/nav', async (req, res) => {
+    const { nav } = req.body;
+
+    // 1. Validation เบื้องต้น
+    if (!nav || isNaN(nav)) {
+        return res.status(400).json({ 
+            error: { code: "INVALID_INPUT", message: "Please provide valid NAV value" } 
+        });
+    }
+
+    try {
+        // 2. แปลงราคาเป็นหน่วย 18 decimals (เหมือนหน่วย ETH/Wei)
+        // เช่น ถ้าส่งมา 1.25 จะกลายเป็น 1250000000000000000
+        const navInWei = ethers.parseUnits(nav.toString(), 18);
+
+        // 3. ส่ง Transaction ไปยัง Smart Contract
+        const tx = await vaultSharesContract.setNav(navInWei);
+        
+        // 4. รอการ Confirm (ถ้าต้องการความชัวร์ก่อนตอบ Client)
+        const receipt = await tx.wait();
+
+        res.json({
+            data: {
+                txHash: tx.hash
+            }
+        });
+
+    } catch (error) {
+        console.error("NAV Update Error:", error);
+
+        // ใช้ vaultInterface.parseError แบบที่เราทำไปก่อนหน้านี้
+        const errorData = error.data || error.error?.data || error.info?.error?.data;
+        
+        if (errorData) {
+            const decodedError = vaultInterface.parseError(errorData);
+            if (decodedError) {
+                // ตัวอย่าง Error ที่พบบ่อยในขั้นตอนนี้
+                if (decodedError.name === "OwnableUnauthorizedAccount") {
+                    return res.status(403).json({
+                        error: { code: "UNAUTHORIZED", message: "Only owner can update NAV" }
+                    });
+                }
+            }
+        }
+
+        res.status(500).json({
+            error: { code: "NAV_UPDATE_FAILED", message: error.message }
         });
     }
 });
