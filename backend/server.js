@@ -38,30 +38,37 @@ startIndexer(vaultSharesContract);
 // --- API Endpoints ---
 
 // GET /api/redemptions
-app.get('/api/redemptions', (req, res) => {
-    const query = `SELECT * FROM redemptions`;
-    db.all(query, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+app.get('/api/redemptions',async (req, res) => {
 
-        const now = Math.floor(Date.now() / 1000);
-        const data = rows.map(row => {
-            let status = row.status;
-            // Logic เปลี่ยน status เป็น ready แบบ Dynamic
-            if (status === 'pending' && now >= row.unlockDate) {
-                status = 'ready';
-            }
-            return {
-                requestId: row.requestId,
-                wallet: row.wallet,
-                shares: ethers.formatUnits(row.shares, 18),
-                nav: ethers.formatUnits(row.nav, 18),
-                amount: ethers.formatUnits(row.amount, 18),
-                unlockDate: new Date(row.unlockDate * 1000).toISOString(),
-                status: status
-            };
+    try {
+        const latestBlock = await provider.getBlock('latest');
+        const blockchainNow = latestBlock.timestamp; // เวลาจริงๆ บนโซ่
+
+        const query = `SELECT * FROM redemptions`;
+        db.all(query, [], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            const data = rows.map(row => {
+                let status = row.status;
+                // Logic เปลี่ยน status เป็น ready แบบ Dynamic
+                if (status === 'pending' && blockchainNow >= row.unlockDate) {
+                    status = 'ready';
+                }
+                return {
+                    requestId: row.requestId,
+                    wallet: row.wallet,
+                    shares: ethers.formatUnits(row.shares, 18),
+                    nav: ethers.formatUnits(row.nav, 18),
+                    amount: ethers.formatUnits(row.amount, 18),
+                    unlockDate: new Date(row.unlockDate * 1000).toISOString(),
+                    status: status
+                };
+            });
+            res.json({ data });
         });
-        res.json({ data });
-    });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.post('/api/settle', async (req, res) => {
