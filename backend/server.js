@@ -60,7 +60,6 @@ app.get('/api/redemptions', (req, res) => {
     });
 });
 
-// เพิ่มใน server.js
 app.post('/api/settle', async (req, res) => {
     const { requestId } = req.body;
 
@@ -74,15 +73,62 @@ app.post('/api/settle', async (req, res) => {
         
         // 3. รอ Transaction ยืนยัน
         await tx.wait();
+        res.json({ data: { txHash: tx.hash } });
 
-        res.json({ message: "Settlement successful", txHash: tx.hash });
     } catch (error) {
-        console.error(error);
-        // ดัก Error ตามที่ Test คาดหวัง
-        if (error.message.includes("InsufficientLiquidity")) {
-            return res.status(400).json({ error: "INSUFFICIENT_LIQUIDITY" });
+        console.log("--- Full Error Object ---");
+        // 1. ดึง Error Data ออกมา (รองรับหลายจุดที่ Ethers v6 อาจจะเก็บไว้)
+        const errorData = error.data || 
+                          error.error?.data || 
+                          error.info?.error?.data ||
+                          error.revert?.data;
+
+        if (errorData) {
+            try {
+                const decodedError = vaultInterface.parseError(errorData);
+                
+                if (decodedError) {
+                    switch (decodedError.name) {
+                        case "AlreadySettled":
+                            return res.status(400).json({
+                                error: { code: "ALREADY_SETTLED", message: "Status is already 'fulfilled'" }
+                            });
+                        case "NotReady":
+                            return res.status(400).json({
+                                error: { code: "UNLOCK_PERIOD_NOT_PASSED", message: "Status is still 'pending'" }
+                            });
+                        case "InsufficientLiquidity":
+                            return res.status(400).json({
+                                error: { code: "INSUFFICIENT_LIQUIDITY", message: "Vault lacks THBMock to payout" }
+                            });
+                        // เพิ่ม case อื่นๆ ตามที่มีใน Solidity
+                    }
+                }
+            } catch (parseError) {
+                console.error("Decoding failed:", parseError);
+            }
         }
-        res.status(500).json({ error: error.message });
+
+        // เช็คกรณีเป็น Revert String (เช่น revert("Invalid ID"))
+        const errorMessage = error.message || "";
+        const reason = error.reason || "";
+
+        if (reason.includes("Invalid ID") || errorMessage.includes("Invalid ID")) {
+            return res.status(400).json({
+                error: { code: "INVALID_REQUEST_ID", message: "ID does not exist" }
+            });
+        }
+        
+        // กรณีเป็น Panic Error (เช่น Array out of bounds หรือส่ง ID ที่ไม่มีอยู่จริง)
+        if (error.code === 'CALL_EXCEPTION') {
+             return res.status(400).json({
+                error: { code: "CONTRACT_CALL_EXCEPTION", message: "Transaction reverted on-chain" }
+            });
+        }
+
+        res.status(500).json({
+            error: { code: "INTERNAL_SERVER_ERROR", message: error.message }
+        });
     }
 });
 
