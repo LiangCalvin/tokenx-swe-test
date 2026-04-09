@@ -76,11 +76,15 @@ async function startIndexer(vaultSharesContract) {
 
         for (const event of pastRequests) {
             const { requestId, wallet, shares, nav, amount } = event.args;
-            // ใช้ INSERT OR IGNORE เพื่อไม่ให้ข้อมูลซ้ำถ้ามีอยู่ใน DB แล้ว
+
+            // ดึงข้อมูลตรงๆ จาก Contract เพื่อให้ได้ค่า unlockDate ที่แม่นยำที่สุด
+            const reqFromChain = await vaultSharesContract.redemptions(requestId);
+            const actualUnlockDate = Number(reqFromChain.unlockDate);
+
             db.run(
                 `INSERT OR IGNORE INTO redemptions (requestId, wallet, shares, nav, amount, unlockDate, status) 
-                 VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
-                [Number(requestId), wallet, shares.toString(), nav.toString(), amount.toString(), Math.floor(Date.now() / 1000)] // unlockDate อาจจะดึงจาก contract จริงๆ ถ้ามี
+                VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+                [Number(requestId), wallet, shares.toString(), nav.toString(), amount.toString(), actualUnlockDate]
             );
         }
 
