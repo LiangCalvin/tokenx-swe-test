@@ -2,6 +2,10 @@ const express = require('express');
 const { ethers } = require('ethers');
 require('dotenv').config();
 
+const vaultSharesJSON = require("../artifacts/smart-contracts/VaultShares.sol/VaultShares.json");
+const vaultSharesABI = vaultSharesJSON.abi;
+const vaultInterface = new ethers.Interface(vaultSharesABI);
+
 const db = require('./database');
 const { startIndexer } = require('./indexer');
 
