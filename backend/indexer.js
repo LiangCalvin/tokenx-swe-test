@@ -100,9 +100,11 @@ async function startIndexer(vaultSharesContract) {
     // --- ส่วนที่ 2: ฟัง Event ใหม่ (Real-time Listening) ---
     // ใส่ try-catch ครอบเพื่อป้องกัน Error "results is not iterable" ทำระบบพัง
     try {
-        vaultSharesContract.on("RedemptionRequested", async (id, wallet, shares, nav, amount) => {
+        vaultSharesContract.on("RedemptionRequested", async (id, wallet, shares, nav, amount, event) => {
             console.log(`📌 New Request Caught: ID ${id}`);
-            const unlockDate = Math.floor(Date.now() / 1000) + (24 * 60 * 60);
+
+            const block = await event.getBlock();
+            const unlockDate = Number(block.timestamp) + (24 * 60 * 60);
             
             db.run(
                 `INSERT OR IGNORE INTO redemptions (requestId, wallet, shares, nav, amount, unlockDate, status) 
