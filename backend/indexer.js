@@ -24,40 +24,96 @@ const db = require("./database");
 //   });
 // }
 // indexer.js
-async function startIndexer(vaultSharesContract) {
-  console.log("Listening for events...");
+// async function startIndexer(vaultSharesContract) {
+//   console.log("Listening for events...");
 
-    // 1. ฟังตอนขอถอน (RedemptionRequested)
-  vaultSharesContract.on("RedemptionRequested", async (id, wallet, shares, nav, amount) => {
-    console.log(`📌 New Request Caught: ID ${id}`);
-    const unlockDate = Math.floor(Date.now() / 1000) + (24 * 60 * 60);
+//     // 1. ฟังตอนขอถอน (RedemptionRequested)
+//   vaultSharesContract.on("RedemptionRequested", async (id, wallet, shares, nav, amount) => {
+//     console.log(`📌 New Request Caught: ID ${id}`);
+//     const unlockDate = Math.floor(Date.now() / 1000) + (24 * 60 * 60);
     
-    db.run(
-      `INSERT INTO redemptions (requestId, wallet, shares, nav, amount, unlockDate, status) 
-       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
-      [Number(id), wallet, shares.toString(), nav.toString(), amount.toString(), unlockDate],
-      (err) => { if(err) console.error("DB Error:", err.message); }
-    );
-  });
+//     db.run(
+//       `INSERT INTO redemptions (requestId, wallet, shares, nav, amount, unlockDate, status) 
+//        VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+//       [Number(id), wallet, shares.toString(), nav.toString(), amount.toString(), unlockDate],
+//       (err) => { if(err) console.error("DB Error:", err.message); }
+//     );
+//   });
 
-  // 2. เพิ่มส่วนนี้: ฟังตอนจ่ายเงินสำเร็จ (RedemptionSettled)
-  vaultSharesContract.on("RedemptionSettled", (id, wallet, amount) => {
-    console.log(`✅ Settled Event Detected: ID ${id}`);
+//   // 2. เพิ่มส่วนนี้: ฟังตอนจ่ายเงินสำเร็จ (RedemptionSettled)
+//   vaultSharesContract.on("RedemptionSettled", (id, wallet, amount) => {
+//     console.log(`✅ Settled Event Detected: ID ${id}`);
     
-    db.run(
-      `UPDATE redemptions SET status = 'fulfilled' WHERE requestId = ?`,
-      [Number(id)],
-      (err) => {
-        if (err) {
-          console.error("❌ DB Update Error:", err.message);
-        } else {
-          console.log(`📝 Database updated: Request ID ${id} is now fulfilled`);
-        }
-      }
-    );
-  });
+//     db.run(
+//       `UPDATE redemptions SET status = 'fulfilled' WHERE requestId = ?`,
+//       [Number(id)],
+//       (err) => {
+//         if (err) {
+//           console.error("❌ DB Update Error:", err.message);
+//         } else {
+//           console.log(`📝 Database updated: Request ID ${id} is now fulfilled`);
+//         }
+//       }
+//     );
+//   });
   
 
+// }
+
+// indexer.js
+
+
+async function startIndexer(vaultSharesContract) {
+    console.log("🚀 Indexer is starting...");
+
+    // --- ส่วนที่ 1: ดึงข้อมูลย้อนหลัง (Sync History) ---
+    // ป้องกันกรณี server ดับ หรือ indexer หลุดไปช่วงหนึ่ง
+    try {
+        console.log("🔍 Scanning for past events...");
+        // ดึง Event ทั้งหมดตั้งแต่ block 0 จนถึงปัจจุบัน
+        const pastRequests = await vaultSharesContract.queryFilter("RedemptionRequested", 0, "latest");
+        const pastSettles = await vaultSharesContract.queryFilter("RedemptionSettled", 0, "latest");
+
+        for (const event of pastRequests) {
+            const { requestId, wallet, shares, nav, amount } = event.args;
+            // ใช้ INSERT OR IGNORE เพื่อไม่ให้ข้อมูลซ้ำถ้ามีอยู่ใน DB แล้ว
+            db.run(
+                `INSERT OR IGNORE INTO redemptions (requestId, wallet, shares, nav, amount, unlockDate, status) 
+                 VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+                [Number(requestId), wallet, shares.toString(), nav.toString(), amount.toString(), Math.floor(Date.now() / 1000)] // unlockDate อาจจะดึงจาก contract จริงๆ ถ้ามี
+            );
+        }
+
+        for (const event of pastSettles) {
+            const { requestId } = event.args;
+            db.run(`UPDATE redemptions SET status = 'fulfilled' WHERE requestId = ?`, [Number(requestId)]);
+        }
+        console.log(`✅ Sync complete. Found ${pastRequests.length} requests.`);
+    } catch (err) {
+        console.error("❌ Sync Error:", err.message);
+    }
+
+    // --- ส่วนที่ 2: ฟัง Event ใหม่ (Real-time Listening) ---
+    // ใส่ try-catch ครอบเพื่อป้องกัน Error "results is not iterable" ทำระบบพัง
+    try {
+        vaultSharesContract.on("RedemptionRequested", async (id, wallet, shares, nav, amount) => {
+            console.log(`📌 New Request Caught: ID ${id}`);
+            const unlockDate = Math.floor(Date.now() / 1000) + (24 * 60 * 60);
+            
+            db.run(
+                `INSERT OR IGNORE INTO redemptions (requestId, wallet, shares, nav, amount, unlockDate, status) 
+                 VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+                [Number(id), wallet, shares.toString(), nav.toString(), amount.toString(), unlockDate]
+            );
+        });
+
+        vaultSharesContract.on("RedemptionSettled", (id) => {
+            console.log(`✅ Settled Event Detected: ID ${id}`);
+            db.run(`UPDATE redemptions SET status = 'fulfilled' WHERE requestId = ?`, [Number(id)]);
+        });
+    } catch (err) {
+        console.error("❌ Real-time Listener Error:", err.message);
+    }
 }
 
 module.exports = { startIndexer };
