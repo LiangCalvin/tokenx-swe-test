@@ -20,7 +20,8 @@ app.use(express.json());
 // ใช้ URL ของ Hardhat node (ปกติคือ http://127.0.0.1:8545)
 // const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL, undefined, {
-    staticNetwork: true
+    staticNetwork: true,
+    batchMaxCount: 1
 });
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
