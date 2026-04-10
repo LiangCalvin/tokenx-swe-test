@@ -21,3 +21,6 @@ npm-debug.log*
 # Testing
 coverage/
 .nyc_output/
+
+# Database
+*.db
