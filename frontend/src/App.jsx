@@ -26,7 +26,8 @@ function App() {
   });
   const [depositAmount, setDepositAmount] = useState("");
   const [redeemShares, setRedeemShares] = useState("");
-  
+  const [userThbBalance, setUserThbBalance] = useState("0");
+
   useEffect(() => {
    
   const fetchStats = async () => {
@@ -61,7 +62,12 @@ function App() {
       if (account) {
         userShares = await vaultContract.balanceOf(account);
       }
-
+      // ดึงข้อมูล THB Balance ของ User
+      let thbBal = 0n;
+      if (account) {
+        thbBal = await thbContract.balanceOf(account);
+      }
+      setUserThbBalance(ethers.formatUnits(thbBal, 18));
       // คำนวณ AUM: (Total Shares * NAV) / 10^18
       const aum = (totalShares * navValue) / ethers.parseUnits("1", 18);
 
@@ -90,31 +96,34 @@ function App() {
   // เพิ่มฟังก์ชันตรวจสอบสถานะกระเป๋าตอนโหลดหน้าเว็บ
   useEffect(() => {
     const checkConnection = async () => {
-      if (window.ethereum) {
-        // ตรวจสอบว่าเคย Connect ไว้แล้วหรือยัง
-        const accounts = await window.ethereum.request({
-          method: "eth_accounts",
-        });
+      if (!window.ethereum) return;
+
+      // 1. ตรวจสอบสถานะเดิม (Auto-connect)
+      const connected = localStorage.getItem("isWalletConnected");
+      if (connected === "true") {
+        const accounts = await window.ethereum.request({ method: "eth_accounts" });
         if (accounts.length > 0) {
           setAccount(accounts[0]);
         }
-
-        // ดักฟังการเปลี่ยน Account
-        window.ethereum.on("accountsChanged", (accounts) => {
-          if (accounts.length > 0) {
-            setAccount(accounts[0]);
-            toast.success("Account Changed");
-          } else {
-            setAccount(null);
-            toast.error("Wallet Disconnected");
-          }
-        });
-
-        // ดักฟังการเปลี่ยน Network (Chain)
-        window.ethereum.on("chainChanged", () => {
-          window.location.reload(); // แนะนำให้โหลดหน้าใหม่เมื่อเปลี่ยน Chain
-        });
       }
+
+      // 2. 🆕 ย้ายมาไว้ข้างนอก if เพื่อให้ดักฟังได้ตลอดเวลา
+      window.ethereum.on("accountsChanged", (accounts) => {
+        if (accounts.length > 0) {
+          setAccount(accounts[0]);
+          localStorage.setItem("isWalletConnected", "true"); // ถ้าเขาสลับใน MetaMask ให้ถือว่าต่ออยู่
+          toast.success("Account Changed");
+        } else {
+          // กรณี User ไปกดลบการเชื่อมต่อใน MetaMask เอง
+          setAccount(null);
+          localStorage.removeItem("isWalletConnected");
+          toast.error("Wallet Disconnected");
+        }
+      });
+
+      window.ethereum.on("chainChanged", () => {
+        window.location.reload();
+      });
     };
 
     checkConnection();
