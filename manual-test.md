@@ -1,8 +1,11 @@
 // Run terminal 'npx hardhat console --network localhost'
 
+// โหลด env
+require("dotenv").config();
+
 // 1. ดึง Instance ของ Contract
-const vs = await ethers.getContractAt("VaultShares", "ใส่_VAULT_SHARES_ADDRESS");
-const thb = await ethers.getContractAt("THBMock", "ใส่_THB_MOCK_ADDRESS");
+const vs = await ethers.getContractAt("VaultShares", process.env.VAULT_SHARES_ADDRESS);
+const thb = await ethers.getContractAt("THBMock", process.env.THB_MOCK_ADDRESS);
 
 // 2. ดึง Account ของเรามา และ เสกเหรียญให้ตัวเอง
 const [owner] = await ethers.getSigners();
@@ -30,7 +33,7 @@ console.log("Shares in hand:", ethers.formatEther(shareBal));
 console.log("Current Shares:", ethers.formatEther(await vs.balanceOf(owner.address)));
 
 // 5.3 เช็คยอดเงินสด (THB) ที่นอนนิ่งอยู่ในสัญญา Vault
-const fv = await ethers.getContractAt("FundVault", "ใส่_FUND_VAULT_ADDRESS");
+const fv = await ethers.getContractAt("FundVault", process.env.FUND_VAULT_ADDRESS);
 console.log("Real Liquidity (at FundVault):", ethers.formatEther(await thb.balanceOf(await fv.getAddress())));
 
 // 6. ขอถอน (Request Redeem) (นี่คือจุดที่จะทำให้ Indexer ทำงาน)
