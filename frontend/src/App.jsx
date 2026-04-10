@@ -138,6 +138,77 @@ function App() {
     }
   };
 
+  const handleDeposit = async (amount) => {
+    if (!account) return toast.error("Please connect wallet first");
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
+      // สร้าง Instance แบบที่ใช้ Signer (เพื่อส่ง Transaction)
+      const vault = new ethers.Contract(
+        VAULT_SHARES_ADDRESS,
+        VAULT_SHARES_ABI,
+        signer,
+      );
+      const thb = new ethers.Contract(THB_MOCK_ADDRESS, ERC20_ABI, signer);
+
+      const parsedAmount = ethers.parseUnits(amount, 18);
+
+      // STEP 1: Approve ให้ VaultShares ดึงเงินจากเราได้
+      const approveTx = await thb.approve(VAULT_SHARES_ADDRESS, parsedAmount);
+      toast.loading("Approving THB...", { id: "tx" });
+      await approveTx.wait();
+
+      // STEP 2: Deposit เข้า Vault
+      const depositTx = await vault.deposit(parsedAmount);
+      toast.loading("Depositing to Vault...", { id: "tx" });
+      await depositTx.wait();
+
+      toast.success("Deposit Successful!", { id: "tx" });
+      // เรียกฟังก์ชัน fetchStats() เพื่ออัปเดตตัวเลขหน้าจอ
+    } catch (error) {
+      console.error(error);
+      toast.error(error.reason || "Transaction Failed", { id: "tx" });
+    }
+  };
+
+  const handleRedeem = async (shares) => {
+    if (!account) return toast.error("Please connect wallet first");
+    if (!shares || parseFloat(shares) <= 0)
+      return toast.error("Please enter a valid amount");
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
+      const vault = new ethers.Contract(
+        VAULT_SHARES_ADDRESS,
+        VAULT_SHARES_ABI,
+        signer,
+      );
+
+      const parsedShares = ethers.parseUnits(shares, 18);
+
+      // ส่ง Transaction ไปที่ฟังก์ชัน requestRedeem ใน Smart Contract
+      const tx = await vault.requestRedeem(parsedShares);
+
+      toast.loading("Requesting Redemption...", { id: "tx" });
+      const receipt = await tx.wait();
+      console.log("redemption receipt: ", receipt)
+      // ค้นหา Request ID จาก Logs (ถ้า Smart Contract ของคุณมี Event ออกมา)
+      toast.success("Redemption Requested Successfully!", { id: "tx" });
+
+      // ล้างค่าใน Input
+      setRedeemShares("");
+    } catch (error) {
+      console.error(error);
+      // ดักจับ Error เฉพาะกรณี เช่น ยอด Shares ไม่พอ
+      const errorMessage = error.reason || error.message || "Redemption Failed";
+      toast.error(errorMessage, { id: "tx" });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-4 md:p-8">
       <Toaster position="top-right" />
@@ -183,8 +254,11 @@ function App() {
                 type="number"
                 placeholder="Amount (THB)"
                 className="w-full p-4 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-blue-500 border-none"
+                onChange={(e) => setDepositAmount(e.target.value)} 
+                value={depositAmount}
               />
-              <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all">
+              <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all"
+              onClick={() => handleDeposit(depositAmount)}>
                 Approve & Deposit
               </button>
             </div>
@@ -207,8 +281,11 @@ function App() {
                 type="number"
                 placeholder="Shares (vTHB)"
                 className="w-full p-4 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-red-500 border-none"
+                onChange={(e) => setRedeemShares(e.target.value)}
+                value={redeemShares}
               />
-              <button className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-all">
+              <button className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-all"
+              onClick={() => handleRedeem(redeemShares)}>
                 Request Redeem
               </button>
             </div>
