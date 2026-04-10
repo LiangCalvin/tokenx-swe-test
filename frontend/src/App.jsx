@@ -285,6 +285,14 @@ function App() {
     }
   };
 
+  const disconnectWallet = () => {
+    setAccount(null);
+    setStats((prev) => ({ ...prev, userShares: "0" }));
+    setUserThbBalance("0");
+    localStorage.removeItem("isWalletConnected");
+    toast.success("Disconnected from App");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-4 md:p-8">
       <Toaster position="top-right" />
@@ -295,13 +303,13 @@ function App() {
           <BarChart3 size={32} /> VaultX Dashboard
         </h1>
         <button
-          onClick={connectWallet}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium flex items-center gap-2 transition-all"
+          onClick={account ? disconnectWallet : connectWallet}
+          className={`${
+            account ? "bg-red-100 text-red-600" : "bg-blue-600 text-white"
+          } px-6 py-2 rounded-full font-medium flex items-center gap-2 transition-all`}
         >
           <Wallet size={20} />
-          {account
-            ? `${account.slice(0, 6)}...${account.slice(-4)}`
-            : "Connect Wallet"}
+          {account ? `Disconnect (...${account.slice(-5)})` : "Connect Wallet"}
         </button>
       </header>
 
@@ -325,16 +333,21 @@ function App() {
               <ArrowDownCircle className="text-blue-500" size={28} />
               <h2 className="text-xl font-semibold">Deposit THB</h2>
             </div>
+            <span className="text-sm font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
+              Wallet: {userThbBalance} THB
+            </span>
             <div className="space-y-4">
               <input
                 type="number"
                 placeholder="Amount (THB)"
                 className="w-full p-4 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-blue-500 border-none"
-                onChange={(e) => setDepositAmount(e.target.value)} 
+                onChange={(e) => setDepositAmount(e.target.value)}
                 value={depositAmount}
               />
-              <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all"
-              onClick={() => handleDeposit(depositAmount)}>
+              <button
+                className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all"
+                onClick={() => handleDeposit(depositAmount)}
+              >
                 Approve & Deposit
               </button>
             </div>
@@ -360,8 +373,10 @@ function App() {
                 onChange={(e) => setRedeemShares(e.target.value)}
                 value={redeemShares}
               />
-              <button className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-all"
-              onClick={() => handleRedeem(redeemShares)}>
+              <button
+                className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-all"
+                onClick={() => handleRedeem(redeemShares)}
+              >
                 Request Redeem
               </button>
             </div>
