@@ -24,55 +24,61 @@ function App() {
     userShares: "0",
     aum: "0",
   });
-
+  const [depositAmount, setDepositAmount] = useState("");
+  const [redeemShares, setRedeemShares] = useState("");
+  
   useEffect(() => {
-    const fetchStats = async () => {
-      if (!window.ethereum) return;
+   
+  const fetchStats = async () => {
+    if (!window.ethereum) return;
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
 
-      try {
-        // ใช้ Provider คุยกับ Hardhat Node
-        const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+      // ตรวจสอบเบื้องต้น
+      const network = await provider.getNetwork();
+      if (network.chainId !== 31337n) return; // ถ้าไม่ใช่ Hardhat ให้หยุดทำงาน
 
-        // สร้าง Contract Instance (ใส่ Address และ ABI ที่คุณจดไว้)
-        const vaultContract = new ethers.Contract(
-          VAULT_SHARES_ADDRESS,
-          VAULT_SHARES_ABI,
-          provider,
-        );
-        const thbContract = new ethers.Contract(
-          THB_MOCK_ADDRESS,
-          ERC20_ABI,
-          provider,
-        );
+      const vaultContract = new ethers.Contract(
+        VAULT_SHARES_ADDRESS,
+        VAULT_SHARES_ABI,
+        provider,
+      );
+      const thbContract = new ethers.Contract(
+        THB_MOCK_ADDRESS,
+        ERC20_ABI,
+        provider,
+      );
 
-        // ดึงข้อมูลแบบขนาน (Parallel) เพื่อความเร็ว
-        const [nav, totalShares, treasuryBalance] = await Promise.all([
-          vaultContract.getNav(),
-          vaultContract.totalSupply(),
-          thbContract.balanceOf(FUND_VAULT_ADDRESS), // ต้องมี address ของ FundVault ด้วย
-        ]);
+      // ดึงข้อมูลจริงจาก Contract
+      const [navValue, totalShares, treasuryBalance] = await Promise.all([
+        vaultContract.nav(),
+        vaultContract.totalSupply(),
+        thbContract.balanceOf(FUND_VAULT_ADDRESS),
+      ]);
 
-        // ดึงข้อมูล User (ถ้าเชื่อมต่อ Wallet แล้ว)
-        let userShares = "0";
-        if (account) {
-          userShares = await vaultContract.balanceOf(account);
-        }
-
-        // คำนวณ AUM: (Total Shares * NAV) / 10^18 (เพราะ NAV กับ Shares มี decimal)
-        // หมายเหตุ: ethers v6 ใช้ BigInt ในการคำนวณ
-        const aum = (totalShares * nav) / ethers.parseEther("1");
-
-        setStats({
-          nav: ethers.formatEther(nav),
-          totalShares: ethers.formatUnits(totalShares, 18),
-          treasury: ethers.formatUnits(treasuryBalance, 18),
-          userShares: ethers.formatUnits(userShares, 18),
-          aum: ethers.formatEther(aum),
-        });
-      } catch (error) {
-        console.error("Error fetching stats:", error);
+      // ดึงข้อมูล User Shares
+      let userShares = 0n;
+      if (account) {
+        userShares = await vaultContract.balanceOf(account);
       }
-    };
+
+      // คำนวณ AUM: (Total Shares * NAV) / 10^18
+      const aum = (totalShares * navValue) / ethers.parseUnits("1", 18);
+
+      // ✅ หัวใจสำคัญ: อัปเดต State เพื่อให้หน้าจอเปลี่ยนเลข
+      setStats({
+        nav: ethers.formatEther(navValue),
+        totalShares: ethers.formatUnits(totalShares, 18),
+        treasury: ethers.formatUnits(treasuryBalance, 18),
+        userShares: ethers.formatUnits(userShares, 18),
+        aum: ethers.formatEther(aum),
+      });
+
+      console.log("Dashboard Updated!");
+    } catch (err) {
+      console.error("Detailed Error:", err);
+    }
+  };
 
     fetchStats();
 
@@ -81,6 +87,38 @@ function App() {
     return () => clearInterval(interval);
   }, [account]);
 
+  // เพิ่มฟังก์ชันตรวจสอบสถานะกระเป๋าตอนโหลดหน้าเว็บ
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (window.ethereum) {
+        // ตรวจสอบว่าเคย Connect ไว้แล้วหรือยัง
+        const accounts = await window.ethereum.request({
+          method: "eth_accounts",
+        });
+        if (accounts.length > 0) {
+          setAccount(accounts[0]);
+        }
+
+        // ดักฟังการเปลี่ยน Account
+        window.ethereum.on("accountsChanged", (accounts) => {
+          if (accounts.length > 0) {
+            setAccount(accounts[0]);
+            toast.success("Account Changed");
+          } else {
+            setAccount(null);
+            toast.error("Wallet Disconnected");
+          }
+        });
+
+        // ดักฟังการเปลี่ยน Network (Chain)
+        window.ethereum.on("chainChanged", () => {
+          window.location.reload(); // แนะนำให้โหลดหน้าใหม่เมื่อเปลี่ยน Chain
+        });
+      }
+    };
+
+    checkConnection();
+  }, []);
 
   // ฟังก์ชันเชื่อมต่อ Wallet
   const connectWallet = async () => {
@@ -93,7 +131,7 @@ function App() {
         toast.success("Wallet Connected!");
       } catch (err) {
         toast.error("Connection Failed");
-        console.log("error:", err)
+        console.log("error:", err);
       }
     } else {
       toast.error("Please install MetaMask");
