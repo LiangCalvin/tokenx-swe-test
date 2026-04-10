@@ -94,6 +94,39 @@ function App() {
   }, [account]);
 
   // เพิ่มฟังก์ชันตรวจสอบสถานะกระเป๋าตอนโหลดหน้าเว็บ
+  // useEffect(() => {
+  //   const checkConnection = async () => {
+  //     const connected = localStorage.getItem("isWalletConnected");
+  //     if (connected === "true" && window.ethereum) {
+  //       // ตรวจสอบว่าเคย Connect ไว้แล้วหรือยัง
+  //       const accounts = await window.ethereum.request({
+  //         method: "eth_accounts",
+  //       });
+  //       if (accounts.length > 0) {
+  //         setAccount(accounts[0]);
+  //       }
+
+  //       // ดักฟังการเปลี่ยน Account
+  //       window.ethereum.on("accountsChanged", (accounts) => {
+  //         if (accounts.length > 0) {
+  //           setAccount(accounts[0]);
+  //           toast.success("Account Changed");
+  //         } else {
+  //           setAccount(null);
+  //           toast.error("Wallet Disconnected");
+  //         }
+  //       });
+
+  //       // ดักฟังการเปลี่ยน Network (Chain)
+  //       window.ethereum.on("chainChanged", () => {
+  //         window.location.reload(); // แนะนำให้โหลดหน้าใหม่เมื่อเปลี่ยน Chain
+  //       });
+  //     }
+  //   };
+
+  //   checkConnection();
+  // }, []);
+  // ปรับปรุง useEffect ตัวที่สอง
   useEffect(() => {
     const checkConnection = async () => {
       if (!window.ethereum) return;
@@ -127,25 +160,59 @@ function App() {
     };
 
     checkConnection();
+
+    // Cleanup function: ล้าง listener เมื่อ component ถูกทำลาย (ป้องกัน memory leak)
+    return () => {
+      if (window.ethereum && window.ethereum.removeListener) {
+        window.ethereum.removeListener("accountsChanged", () => {});
+        window.ethereum.removeListener("chainChanged", () => {});
+      }
+    };
   }, []);
 
   // ฟังก์ชันเชื่อมต่อ Wallet
+  // const connectWallet = async () => {
+  //   if (window.ethereum) {
+  //     try {
+  //       const accounts = await window.ethereum.request({
+  //         method: "eth_requestAccounts",
+  //       });
+  //       setAccount(accounts[0]);
+  //       localStorage.setItem("isWalletConnected", "true");
+  //       toast.success("Wallet Connected!");
+  //     } catch (err) {
+  //       toast.error("Connection Failed");
+  //       console.log("error:", err);
+  //     }
+  //   } else {
+  //     toast.error("Please install MetaMask");
+  //   }
+  // };
   const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setAccount(accounts[0]);
-        toast.success("Wallet Connected!");
-      } catch (err) {
-        toast.error("Connection Failed");
-        console.log("error:", err);
-      }
-    } else {
-      toast.error("Please install MetaMask");
+  if (window.ethereum) {
+    try {
+      // 🆕 ใช้ตัวนี้แทน eth_requestAccounts ถ้าอยากให้ Popup เด้งชัวร์ๆ
+      await window.ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }],
+      });
+
+      // หลังจากเลือกเสร็จค่อยดึง account มา
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+
+      setAccount(accounts[0]);
+      localStorage.setItem("isWalletConnected", "true");
+      toast.success("Wallet Connected!");
+    } catch (err) {
+      console.log("error:", err);
+      toast.error("Connection Failed");
     }
-  };
+  } else {
+    toast.error("Please install MetaMask");
+  }
+};
 
   const handleDeposit = async (amount) => {
     if (!account) return toast.error("Please connect wallet first");
