@@ -73,11 +73,11 @@ function App() {
 
       // ✅ หัวใจสำคัญ: อัปเดต State เพื่อให้หน้าจอเปลี่ยนเลข
       setStats({
-        nav: ethers.formatEther(navValue),
-        totalShares: ethers.formatUnits(totalShares, 18),
-        treasury: ethers.formatUnits(treasuryBalance, 18),
-        userShares: ethers.formatUnits(userShares, 18),
-        aum: ethers.formatEther(aum),
+        nav: parseFloat(ethers.formatEther(navValue)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
+        totalShares: parseFloat(ethers.formatUnits(totalShares, 18)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
+        treasury: parseFloat(ethers.formatUnits(treasuryBalance, 18)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        userShares: parseFloat(ethers.formatUnits(userShares, 18)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }),
+        aum: parseFloat(ethers.formatEther(aum)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       });
 
       console.log("Dashboard Updated!");
@@ -94,39 +94,6 @@ function App() {
   }, [account]);
 
   // เพิ่มฟังก์ชันตรวจสอบสถานะกระเป๋าตอนโหลดหน้าเว็บ
-  // useEffect(() => {
-  //   const checkConnection = async () => {
-  //     const connected = localStorage.getItem("isWalletConnected");
-  //     if (connected === "true" && window.ethereum) {
-  //       // ตรวจสอบว่าเคย Connect ไว้แล้วหรือยัง
-  //       const accounts = await window.ethereum.request({
-  //         method: "eth_accounts",
-  //       });
-  //       if (accounts.length > 0) {
-  //         setAccount(accounts[0]);
-  //       }
-
-  //       // ดักฟังการเปลี่ยน Account
-  //       window.ethereum.on("accountsChanged", (accounts) => {
-  //         if (accounts.length > 0) {
-  //           setAccount(accounts[0]);
-  //           toast.success("Account Changed");
-  //         } else {
-  //           setAccount(null);
-  //           toast.error("Wallet Disconnected");
-  //         }
-  //       });
-
-  //       // ดักฟังการเปลี่ยน Network (Chain)
-  //       window.ethereum.on("chainChanged", () => {
-  //         window.location.reload(); // แนะนำให้โหลดหน้าใหม่เมื่อเปลี่ยน Chain
-  //       });
-  //     }
-  //   };
-
-  //   checkConnection();
-  // }, []);
-  // ปรับปรุง useEffect ตัวที่สอง
   useEffect(() => {
     const checkConnection = async () => {
       if (!window.ethereum) return;
@@ -171,23 +138,6 @@ function App() {
   }, []);
 
   // ฟังก์ชันเชื่อมต่อ Wallet
-  // const connectWallet = async () => {
-  //   if (window.ethereum) {
-  //     try {
-  //       const accounts = await window.ethereum.request({
-  //         method: "eth_requestAccounts",
-  //       });
-  //       setAccount(accounts[0]);
-  //       localStorage.setItem("isWalletConnected", "true");
-  //       toast.success("Wallet Connected!");
-  //     } catch (err) {
-  //       toast.error("Connection Failed");
-  //       console.log("error:", err);
-  //     }
-  //   } else {
-  //     toast.error("Please install MetaMask");
-  //   }
-  // };
   const connectWallet = async () => {
   if (window.ethereum) {
     try {
@@ -242,6 +192,7 @@ function App() {
       await depositTx.wait();
 
       toast.success("Deposit Successful!", { id: "tx" });
+      setDepositAmount("");
       // เรียกฟังก์ชัน fetchStats() เพื่ออัปเดตตัวเลขหน้าจอ
     } catch (error) {
       console.error(error);
