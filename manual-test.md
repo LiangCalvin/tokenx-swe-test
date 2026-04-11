@@ -55,3 +55,17 @@ const stranger = signers[1]; // คนที่ 2 ใน list (index 1)
 const vsAsStranger = vs.connect(stranger);
 // ลองเรียกแบบไม่มี try-catch ก่อน เพื่อดูว่ามัน Revert สีแดงๆ จริงไหม
 await vs.connect((await ethers.getSigners())[1]).setNav(ethers.parseEther("999"))
+
+// 11. ทดสอบคนที่ user account ที่สอง
+// 1. ดึง Signers มาใหม่แบบระบุ 2 คน
+const [owner, user1] = await ethers.getSigners();
+
+// 2. ลองสั่ง Mint อีกครั้ง (รอบนี้ user1 จะมีตัวตนแล้ว)
+await thb.mint(user1.address, ethers.parseUnits("5000", 18));
+
+// 3. ตรวจสอบ Address ของ user1 เพื่อเอาไปเทียบใน MetaMask
+console.log("User 1 Address:", user1.address); 
+
+// 12. Test pause/ unpause
+await vs.pause();
+await vs.unpause();
