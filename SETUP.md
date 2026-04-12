@@ -4,12 +4,14 @@ This project is a full-stack Web3 application consisting of:
 - Smart Contracts (Hardhat)
 - Backend API (Node.js / SQLite)
 - Frontend (React / Next.js)
-
+---
 ## 📋 Prerequisites
 - Node.js >= 18
 - npm or yarn
 - Git
 - MetaMask (optional for frontend testing)
+
+---
 
 ## Project Structure
 project/
@@ -17,70 +19,77 @@ project/
 ├── backend/
 ├── frontend/
 
+---
 
 ## 🛠 Installation & Setup
-ตรงนี้แหละครับที่ต้องใส่แบบ เรียงข้อ เพื่อให้เขาก๊อปปี้ไปรันได้เลย
 
-Step 1: Clone the Repository
-git clone [https://github.com/LiangCalvin/tokenx-swe-test]
-cd [https://github.com/LiangCalvin/tokenx-swe-test]
+### ⚙️ 1. Clone Repository
+```bash
+git clone https://github.com/LiangCalvin/tokenx-swe-test.git
+cd tokenx-swe-test
+```
 
-Step 2: Install Dependencies
-npm install
-# ถ้ามีโฟลเดอร์แยก
-cd frontend && npm install
+### 📦 2. Install Dependencies
+```bash
+cd smart-contracts && npm install
 cd ../backend && npm install
+cd ../frontend && npm install
+```
 
-Step 3: Environment Variables
-## Environment Setup
-
-Each module requires its own `.env` file.
-
-### smart-contracts/.env
+### 🔐 3. Environment Setup
+Each module requires its own .env file.
+##### 📌 smart-contracts/.env
+```bash
 RPC_URL=
 PRIVATE_KEY=
+```
 
-## Smart Contracts Setup
-
+### 🔧 4. Smart Contracts Setup
+```bash
 cd smart-contracts
-
-npm install
-
 npx hardhat compile
+```
 
-npx hardhat test
-
-## Deploy Contracts (Local)
-
-npx hardhat node
-
-# in another terminal
-npx hardhat run scripts/deploy.js --network localhost
-
-## Backend Setup
-
-cd backend
-
-npm install
-
-npm run dev
-
-## Frontend Setup
-
-cd frontend
-
-npm install
-
-npm run dev
-
-## Running Tests
-
+### 🚀 5. Run Local Blockchain
+Start Hardhat local node:
+```bash
 cd smart-contracts
+npx hardhat node
+```
 
+### 📜 6. Deploy Contracts
+In a new terminal:
+```bash
+cd smart-contracts
+npx hardhat run scripts/deploy.js --network localhost
+```
+> 📌 After deployment, copy contract addresses and update your .env if required.
+
+### 🖥️ 7. Start Backend
+```bash
+cd backend
+npm run dev
+```
+> SQLite database (vault.db) will be created automatically.
+
+### 🌐 8. Start Frontend
+```bash
+cd frontend
+npm run dev
+```
+Frontend will be available at:
+```code
+http://localhost:3000
+```
+
+### 🧪 9. Run Tests
+```bash
+cd smart-contracts
 npx hardhat test
+```
+> ✅ All tests should pass successfully.
 
-## End-to-End Flow
-
+### 🔄 10. End-to-End Flow
 1. Mint mock tokens
 2. Approve VaultShares contract
 3. Deposit funds
