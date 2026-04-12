@@ -1,3 +1,6 @@
+
+#### [🚀 Click here for SETUP & INSTALLATION instructions](https://github.com/LiangCalvin/tokenx-swe-test/blob/main/SETUP.md)
+
 # 🏦 Assessment: Mutual Fund Vault (Full-Stack Web3)
 
 > 💡 **Important**: Please understand that this assessment will be related with your future work at Token X.
