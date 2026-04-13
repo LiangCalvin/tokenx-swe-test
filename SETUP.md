@@ -14,11 +14,12 @@ This project is a full-stack Web3 application consisting of:
 ---
 
 ## 📁 Project Structure
+```text
 project/
 ├── smart-contracts/
 ├── backend/
 └── frontend/
-
+```
 ---
 
 ## 🛠 Installation & Setup
@@ -40,7 +41,7 @@ cd ../frontend && npm install
 Each module requires its own .env file.
 ##### 📌 smart-contracts/.env
 ##### 📌 backend/.env
-```bash
+```json
 #Default RPC_URL
 RPC_URL=http://127.0.0.1:8545
 PRIVATE_KEY=0x...
@@ -48,7 +49,7 @@ VAULT_SHARES_ADDRESS=0x...
 FUND_VAULT_ADDRESS=0x...
 ```
 ##### 📌 frontend/.env
-```bash
+```json
 VITE_VAULT_SHARES_ADDRESS=0x...
 VITE_THB_MOCK_ADDRESS=0x...
 VITE_FUND_VAULT_ADDRESS=0x...
@@ -68,8 +69,10 @@ cd smart-contracts
 npx hardhat node
 ```
 > 📌 After deployment, you will see output similar to:
+```bash
 Account #0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 ETH)
-Private Key: 0x... 
+Private Key: 0x...
+```
 >
 Copy **Private Key** values and update your environment variables (.env):
 
@@ -81,9 +84,11 @@ cd smart-contracts
 npx hardhat run scripts/deploy.js --network localhost
 ```
 > 📌 After deployment, you will see output similar to:
+```bash
 VAULT_SHARES_ADDRESS: 0x...
 FUND_VAULT_ADDRESS: 0x...
 THB_MOCK_ADDRESS: 0x...
+```
 >
 Copy these values and update your environment variables in both backend and frontend `.env` files.
 
@@ -169,7 +174,7 @@ You can test the API using tools such as Postman or cURL.
 
 ### 1. 🔗 Add Network (Hardhat Local)
 To interact with the frontend, connect MetaMask to the local Hardhat network:
-```bash
+```text
 Network Name: Hardhat Local
 RPC URL: http://127.0.0.1:8545
 Chain ID: 31337
@@ -184,7 +189,7 @@ npx hardhat node
 ### 3. 🪙 Add Token (THB_MOCK)
 Add custom token in MetaMask:
 
-Token Contract Address: THB_MOCK_ADDRESS (from deployment)
+Token Contract Address: **THB_MOCK_ADDRESS** (from deployment)
 > After adding the token, you should see your THB_MOCK balance in MetaMask.
 
 ---
