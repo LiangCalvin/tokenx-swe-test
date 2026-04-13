@@ -193,3 +193,21 @@ Token Contract Address: **THB_MOCK_ADDRESS** (from deployment)
 > After adding the token, you should see your THB_MOCK balance in MetaMask.
 
 ---
+
+## 🧪 Manual Testing via Hardhat Console (Optional)
+
+You can manually test the core protocol flow using Hardhat console.
+
+### 📍 Run Console
+```bash
+cd smart-contracts
+npx hardhat console --network localhost
+```
+### 📜 Load Script
+Copy and run the script from:
+```text
+test/manual-test.md
+```
+Ensure contracts are deployed and .env variables are properly configured before running the script.
+
+---
