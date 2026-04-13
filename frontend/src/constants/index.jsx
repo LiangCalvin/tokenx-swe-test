@@ -1,6 +1,7 @@
-export const VAULT_SHARES_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
-export const THB_MOCK_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; 
-export const FUND_VAULT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+//รัน npx hardhat run scripts/deploy.js --network localhost 
+export const VAULT_SHARES_ADDRESS = import.meta.env.VITE_VAULT_SHARES_ADDRESS;
+export const THB_MOCK_ADDRESS = import.meta.env.VITE_THB_MOCK_ADDRESS;
+export const FUND_VAULT_ADDRESS = import.meta.env.VITE_FUND_VAULT_ADDRESS;
 
 export const VAULT_SHARES_ABI = [
   "function nav() view returns (uint256)",
