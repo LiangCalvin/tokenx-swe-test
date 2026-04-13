@@ -13,11 +13,11 @@ This project is a full-stack Web3 application consisting of:
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 project/
 ├── smart-contracts/
 ├── backend/
-├── frontend/
+└── frontend/
 
 ---
 
@@ -39,10 +39,21 @@ cd ../frontend && npm install
 ### 🔐 3. Environment Setup
 Each module requires its own .env file.
 ##### 📌 smart-contracts/.env
+##### 📌 backend/.env
 ```bash
-RPC_URL=
-PRIVATE_KEY=
+#Default RPC_URL
+RPC_URL=http://127.0.0.1:8545
+PRIVATE_KEY=0x...
+VAULT_SHARES_ADDRESS=0x...
+FUND_VAULT_ADDRESS=0x...
 ```
+##### 📌 frontend/.env
+```bash
+VITE_VAULT_SHARES_ADDRESS=0x...
+VITE_THB_MOCK_ADDRESS=0x...
+VITE_FUND_VAULT_ADDRESS=0x...
+```
+> See item 5. and 6. to get these value
 
 ### 🔧 4. Smart Contracts Setup
 ```bash
@@ -56,6 +67,12 @@ Start Hardhat local node:
 cd smart-contracts
 npx hardhat node
 ```
+> 📌 After deployment, you will see output similar to:
+Account #0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 ETH)
+Private Key: 0x... 
+>
+Copy **Private Key** values and update your environment variables (.env):
+
 
 ### 📜 6. Deploy Contracts
 In a new terminal:
@@ -63,7 +80,13 @@ In a new terminal:
 cd smart-contracts
 npx hardhat run scripts/deploy.js --network localhost
 ```
-> 📌 After deployment, copy contract addresses and update your .env if required.
+> 📌 After deployment, you will see output similar to:
+VAULT_SHARES_ADDRESS: 0x...
+FUND_VAULT_ADDRESS: 0x...
+THB_MOCK_ADDRESS: 0x...
+>
+Copy these values and update your environment variables in both backend and frontend `.env` files.
+
 
 ### 🖥️ 7. Start Backend
 ```bash
@@ -77,9 +100,9 @@ npm run dev
 cd frontend
 npm run dev
 ```
-Frontend will be available at:
+Frontend will be available at (or else please see in your terminal):
 ```code
-http://localhost:3000
+http://localhost:5173
 ```
 
 ### 🧪 9. Run Tests
@@ -96,3 +119,72 @@ npx hardhat test
 4. Request redemption
 5. Wait 24 hours (or simulate)
 6. Admin settles redemption
+
+---
+
+## ⚠️ Security Notes
+
+- Never commit `.env` files or private keys to the repository.
+- The provided private key from Hardhat is for local development only.
+- Do not use these keys in production environments.
+
+---
+
+## 💡 Important Notes
+
+- Ensure Hardhat node is running before deploying contracts.
+- Contract addresses must be updated in both backend and frontend `.env` files after deployment.
+- Restart frontend/backend after updating environment variables.
+
+---
+
+## 🧯 Troubleshooting
+
+- If contracts fail to connect, verify `.env` values are correct.
+- If frontend shows undefined values, restart dev server.
+- Ensure no other service is using port 8545 or 5173.
+
+---
+
+## 📡 API Testing (Optional)
+
+The backend API runs on:
+```
+http://localhost:3000
+```
+You can test the API using tools such as Postman or cURL.
+
+### Example Endpoints
+
+- GET http://localhost:3000/api/redemptions
+- POST http://localhost:3000/api/settle
+- POST http://localhost:3000/api/nav
+- POST http://localhost:3000/api/withdraw
+
+> Ensure the backend server is running before making requests.
+
+---
+
+## 🦊 MetaMask Setup (Optional)
+
+### 1. 🔗 Add Network (Hardhat Local)
+To interact with the frontend, connect MetaMask to the local Hardhat network:
+```bash
+Network Name: Hardhat Local
+RPC URL: http://127.0.0.1:8545
+Chain ID: 31337
+Currency Symbol: ETH
+```
+
+### 2. 🔑 Import Account
+Import the default Hardhat account using the private key shown when running:
+```bash
+npx hardhat node
+```
+### 3. 🪙 Add Token (THB_MOCK)
+Add custom token in MetaMask:
+
+Token Contract Address: THB_MOCK_ADDRESS (from deployment)
+> After adding the token, you should see your THB_MOCK balance in MetaMask.
+
+---
